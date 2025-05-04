@@ -579,10 +579,7 @@ However, this is still complex to compute cause of the estimation of all the pos
 By considering the features in log space and computing the predicted class as a linear function of input features, classifier that use linear combinations of the inputs to make classification decision like naive bayes and logistic regression are called **linear classifiers**.
 
 
-##### Training the Naive Bayes Classifier
-How can we learn the probabilities of *P(c)* and *P(fi|c)*?
 
-First we'll consider the MLE. Simply use the frequencies in the data. For the class
 
 
 

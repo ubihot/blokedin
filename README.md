@@ -31,21 +31,21 @@ pip install torch tensorflow matplotlib numpy pandas
 ## resources
 - https://web.stanford.edu/~jurafsky/slp3/
 - https://www.youtube.com/watch?v=Rvppog1HZJY (Stanford, funnily released on 2025-04-08)
-- include the CMU advanced course fall 2024
+- TODO include the CMU advanced course fall 2024
 - TAD lectures slides
 - TODO read and see if it helps https://course.fast.ai/ (it's not all NLP though) (maybe list it as a resource, )
 - TODO write the history of nlp as in this video https://www.youtube.com/watch?v=Rvppog1HZJY
+- TODO include any other useful resource here
 
-
-## Intro Stuff
+## Lecture One
 mainly following the Speech and Language Processing book
 - Tokenization
 - Regular Expressions
 - Edit Distance
 - BPE, what was before BPE?? what's the BPE paper? include it here
 
-#### 
-ELIZA is a simple pattern recognition program (chatbot) that acts like a Rogerian psycotherapist in the 1966, acted like a listener that knows nothing about the world.
+### Regular Expressions, Tokenization, Edit Distance (maybe/?)
+ELIZA was a chatbot like program using pattern recognition phrases like "I need X" and translate into suitable output like "what would you do if you got X?". It didn't know anything about the world, it was like a listener that acts like knowing nothing.
 
 One tool to describe text pattern is **regular expression**, for example to extract strings from document.
 **text normalization** means converting it to a more convenient standard form.
@@ -222,7 +222,7 @@ TODO
 ##### Word Normalization, Lemmatization and Stemming
 The simplest case of word normalization is **case folding**. e.g. mapping everything to lowercase like `Woodchuck` and `woodchuck` are represented identically, which is very helpful for generalization in tasks like information retrieval or speech recognition.
 
-For sentiment analysis and other text classification taks, information extraction, machine translation instead case folding is generally not done.
+For sentiment analysis and other text classification tasks, information extraction, machine translation instead case folding is generally not done.
 
 If you use BPE you may not need to do any other normalization.
 
@@ -271,13 +271,250 @@ we covered
 
 
 
+## Lecture Two (N-Gram Language Models)
+can we predict the next word someone says?
+
+we'll introduce what is **language models** or **LMs**.
+A language model is a machine learning model that predicts upcoming words. Formally, a language model assigns a **probability** to each possible next word, or equivalently gives a probability distribution over possible next words.
+
+why do we want to predict next words or sentences?
+1. generation: we can correct grammar errors
+
+Language models can also help in **augmentative and alternative communication** (ACC).
+ACC is used by people that cannot speak or sign but use eye gaze to select words from menu.
+
+Language models learn a lot by just being trained on predicting the next word.
+
+The simplest kind of language model is the **n-gram** language model. An n-gram is a sequence of n-words, e.g. 2-words (**bigram**), 3-words (**trigram**).
+
+The n-gram means probabilistic model that predicts the next word given the n-1 words.
+
+
+##### N-Grams
+we begin with assigning the probability of the next word given a history.
+
+e.g. P(w|h) where h is *"The water of Walden Pond is so beautifully"* and w is *blue*.
+
+one way to estimate this probability is directly using the frequency counts
+- take a very large corpus
+- count the number of times we see *The water of Walden Pond is so beautifully*
+- count the number of times that is followed by *blue*
+- this would answer the question "Out of the times we saw history *h*, how many times was it followed by the word *w*
+
+![alt text](images/frequency_counts_formula.png)
+
+Because language is **creative**, not even the entire web could give a decent estimate to that question.
+
+
+We may refer to **words** but those are essentially **tokens** as the one implemented in `notebooks/lecture_1.ipynb` BPE algorithm.
+
+>> there's intro/requirement of probability here
+
+
+**Markov Assumption**
+instead of calculating the probability of a word given its entire history, we can **approximate** the history by just the last few words.
+
+The **bigram** model approximates the probability of the next word given all the previous words P(w[n]|w[1, n-1]) by using only the conditional probability given the preceding word P(w[n]|w[1, n-1]). i.e. 
+
+instead of doing this:
+
+```
+P(blue|The water of Walden Pond is so beautifully)
+```
+
+it does this
+
+```
+P(blue|beutifully)
+```
+
+The assumption that the probability of the next word depends only on the previous word is called **Markov** assumption. Markov models are a class of probablistic models that assume that we can predict the probablity of some future unit without looking too far into the past.
+
+
+###### How do we estimate probablities?
+how do we estimate the probablities of the bigram or n-gram?
+an intuitive way is called **maximum likelihood estimation (MLE)**. We get the MLE for the parameters of an n-gram model by getting the counts from a corpus, and **normalizing** the counts so they lie between 0-1 and sum to 1.
+
+e.g. for a given bigram probability of a bigram w[n] we count the bigram C(w[n-1], w[n]) and divide by the number of occurrences of bigrams starting with w[n-1].
+
+this ratio is called **relative frequency**.
+
+when counting for bigram we need to augment each sentence with the special character `<s>` at the beginnning, so we get the bigram context of the first word.
+
+```
+<s> I am Sam </s>
+<s> Sam I am </s>
+<s> I do not like green eggs and ham </s>
+```
+
+depending on the context some words may appear more or less. However, MLE generalize it to the given model so we need a better probability estimate.
+
+e.g. the berkeley restaurant dataset (normalized by removing punctuation and lowercasing)
+
+```
+can you tell me about any good cantonese restaurants close by
+tell me about chez panisse
+i'm looking for a good place to eat breakfast
+when is caffe venezia open during the day 
+```
+
+##### how do you deal with scale in large n-gram models
+language model probablities are stored and computed in log space as **log probablities**.
+the reason is cause the probablities are less than or equal to 1, so the more we multiply them together the smaller the product becomes, potentially leading to underflow.
+we do all computation and storage in log space and conver back to into probablities if needed by taking the exp of logprob.
+
+```
+p1 x p2 x p3 x p4 = exp(logp1 + logp2 + logp3 + logp4)
+```
+
+for larger n-grams like trigram or 4grams we'd need to add more pseudo words for the first gram. e.g. `P(I|<s><s>)`
+
+some popular large n-grams datasets are:
+- COCA
+- 1 billion word corpus of American English
+- Google's Web 5-gram from 1 trillion words of English web text
+- Google Books Ngrams corpora (many languages)
+
+infini-gram (Liu at al 2024) allows n-grams of any length.
+
+it's standard to quantize the probabilities using only 4-8bits instead of 8 byte floats.
+
+##### Evaluating Language Models: Training and Test Sets
+**extrinsic evaluation**: plug the model into an application and measure how much the application improves. This is the only way to evaluate various components of the application together but it's expensive to run large systems end-to-end for two different models.
+
+we need a metric to better evaluate potential improvements in a language model.
+**intrinsic evaluation** is a metric that measures the quality of a language model independent of any application.
+
+
+to evaluate any language model we need 3 datasets, **training set, dev set, test set**.
+
+the **training set** is the data we use to learn the parameters of our model.
+
+the **test set** is a different, held out data, not overlapping with the training set, that we use to evaluate the model.
+
+how do we choose the training set and test set?
+
+the test set should reflect the language we want our model to use for. e.g. if we want it to use for chemistry lectures then the test set should be text of chemistry lectures.
+
+we need to be careful to not have the test data from one document, author, as that won't be a good measure of general performance.
+
+
+what does it mean to "fit the test set"?
+
+which language model assigns **higher probability** to the test set, i.e. which one accurately predicts the test set.
+hence, it's important that we don't put the test sentences into the training data. This is called **training on the test set**. This will make all the probabilities look high and cause inaccuracies in **perplexity**.
+
+Also, we need to make sure that we test our model on the test set only a few times, ideally once. As this would affect our training if we test it many times on the test set.
+Hence, we create a different set called **dev set** on which we run our experiments of the model.
+
+How do we divide our data into training, development, and test set?
+we want to pick the smallest test set that gives us enough statistical power to measure a statistically significant difference between two potential models. It's important that the dev set is drawn from the test set as that's the one we'd use for final evaluatation.
+
+
+##### Evaluating Language Models: Perplexity
+we don't use raw probabilities to evaluate a language model as the probability depends on the number of words or tokens in it, probability of a test set gets smaller the longer the text.
+
+we'd prefer a metric that is per-word, normalized by length, so we could compare across texts of different lengths.
+
+we use **perplexity** (PP or PPL) on a test set, it's the inverse probability of the test set (one over the probability of the test set) normalized by the number of words/tokens. For this reason it's sometimes called per-word or per-token perplexity. Normalize by the numbers of words N by taking the Nth root. Because of the inverse, the higher the probabilility the lower the perplexity. Thus **lower the perplexity, better the model**.
+
+why does perplexity use the inverse? TODO in section 3.7
+
+perplexity is a function of both text and language model and can be used to compare the performance of different language models.
+
+an intrinsic improvement in perplexity doesn't guarantee an explicit improvement in a task like translation or speech recognition.
+
+perplexity can also be thought as the **weighted average branching factor** of a language.
+The branching factor of a language is the number of possible next words that can follow any word.
+
+##### Sampling sentences from a language model
+one important way to visualize what kind of knowledge a language embodies is to sample from it.
+
+**Sampling** from a distribution means to choose random points according to their likelihood. Hence, sampling from a language model means the language models will generate sentences that it thinks have high probability rather than low probability.
+
+
+##### Generalize vs overfitting the training set
+n-gram is dependent on the training corpus, implicitly the probabilities encode specific facts about the training corpus. Also, n-grams do a better job modeling the training corpus as we increase the value of `n` in n-grams.
+
+statistical models are useless if the training and test set are different as Shakespeare and Wall Street Journal. To address this we need to make sure that the training set has a similar **genre** to the task we're trying to accomplish.
+e.g. for language model of translating legal documents we need a training corpus of legal documents.
+Also get the training data in the correct **dialect** or **variety**. e.g. African American.
+
+what if a word doesn't appear in the training set but appears in the test set?
+
+we usually don't use words but subwords (tokens), and any words can be subdivided into tokens, hence not leading to unseen words/tokens.
+
+
+##### Smoothing, Interpolation and Backoff
+problem with MLE for probabilities, in the trainig set we may miss some valid english words sequences.
+e.g. `ruby` and `slippers` appear in the training set but not the phrase `ruby slippers`.
+
+This is called unseen sequences or **zeros**. problem for two reasons:
+- the unseen sequences presence, makes underestimation of their probability which hurts performance of the app we run this on
+- if probability of any word in the test set is 0, the probability of the whole test set is 0 and perplexity cannot be computed.
+
+to deal with zero probability n-grams that should have some non-zero probability is called **smoothing** or **discounting**. Smoothing give some of probability mass from more frequent events and give it to unseen events.
+
+Some smoothing algorithms are:
+- **Laplace (add-one) smoothing**
+- **stupid backoff**
+- **n-gram interpolation**
+
+
+**Laplace Smoothing**
+add one to all the n-gram counts before we normalize them into probabilities. Laplace Smoothing doesn't perform well to be used in modern n-gram models but it's useful as it introduces many concepts that we see in other smoothing algorithms, gives useful baseline and is practical for other tasks like **text classification**.
+
+recall MLE for unigram:
+P(w[i]) = c[i]/N
+
+N = total number of word tokens
+
+Laplace just adds one to it:
+PLaplace(w[i]) = (c[i] + 1) / (N + V)
+
+^^ (N+V) cause there are V words in the vocabulary and each one of them was incremented by 1, we need account for the extra V observations. What happens to our P values if we don't increase the denominator?
+
+TODO fill in the last parts for this
+
+
+**Add k-smoothing**
+move less of the probability mass to the unseen events. Instead of adding 1 we add a fractional count (0.5? 0.01?). This is called **add-k-smoothing**. We need a method for choosing k; e.g. optimizing on the **devset**. Although, add-k-smoothing is useful for some tasks (text classification), it doesn't work well for language modeling, generating counts with poor variances and often inappropriate discounts.
+
+
+**Language Model Interpolation**
+We may use **less context** to help us generalize for contexts that the model hasn't learnt much about. e.g. use bigram for unseen trigram and use unigram for unseen bigram, etc..
+
+a common hierarchy to use this technique is called **interpolation**: computing a new probability by interpolating (weighting & combining) the trigram, bigram and unigram probabilities. In simple linear interpolation we combine the n-grams giving them some weight with lambda constants that shoudl sum up to 1. We can even have lamdas conditioned on the context (n-gram).
+How are these lambdas values set?
+They're learnt from an **held-out** corpus, additional training corpus hold out from training data to set the values of lambdas. Held out corpora are generally used to set **hyperparameters**. One way to find the optimal set of lambdas is to use the **EM** algorithm, an iterative algorithm that converges on locally optimal lambdas.
+
+**stupid backoff**
+alternative to interpolation is **backoff**. if the n-gram we need has zero counts, we look at the n-1-gram and we do so until we find one which has a count.
+
+For a backoff model to give correct probability distribution we have to **discount** the higher order n-grams to save some probability mass for the lower orde n-grams. In practice, instead of discounting it's simpler non-discounted backoff called **stupid backoff**.
+
+Stupid backoff gives up the idea of trying to make the language model a true probability ditribution. No discounting of higher order probabilities, we simply backoff to the lower n-gram weighted by a fixed (context-independent) weight. This doesn't produce a probability distribution and it's referred as to S. Backoff terminates at the unigram.
+
+##### Advanced: Perplexity's Relation to Entropy
+The perplexity measure arises from the information-theoretic concept of cross-entropy, which explains otherwise mysterious properties of perplexity (why e.g. the inverse probability?) and its relation to entropy. 
+
+**Entropy** is a measure of information.
+![alt text](images/entropy_formula.png)
+
+one intuitive way to think about entropy is a lower bound on the number of bits it would take to encode a certain decision or piece of information in the optimal coding scheme.
+
+an example of entropy is the horse racing and sending message to the broker on which horse to bet for us. We could use binary coding and 3 bits to send but if we have probabilities of which horses are more likely then we could encode the more likely with less bits and the unlikely ones with more bits. If all the horses have same probability 1/8 then we'd need 3 bits.
+
+We've calculated the entropy only on a single variable but we usually do it on *sequences*.
+
+TODO finish the rest of the lecture about entropy
+
+
+## Lecture Three: Naive Bayes, Text Classification, and Sentiment
+TODO look at the TAD lectures when doing this lecture
 
 
 
-### Regular Expressions, Tokenization, Edit Distance (maybe/?)
-ELIZA was a chatbot like program using pattern recognition phrases like "I need X" and translate into suitable output like "what would you do if you got X?". It didn't know anything about the world, it was like a listener that acts like knowing nothing.
-
-One of the most important tool to describe text.
 
 
 
